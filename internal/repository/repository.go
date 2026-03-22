@@ -26,6 +26,7 @@ type DB interface {
 	Close(ctx context.Context) error
 	Config() *pgx.ConnConfig
 	Ping(ctx context.Context) error
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
 type repository struct {
@@ -63,18 +64,45 @@ func (s *repository) Create(ctx context.Context, wallet dto.WalletRequest) error
 }
 
 func (s *repository) Update(ctx context.Context, wallet dto.WalletRequest) error {
+	tx, err := s.Con.Begin(ctx)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = tx.Rollback(ctx)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}()
+
+	selectQuery := `SELECT balance FROM wallets WHERE uuid = $1 FOR UPDATE`
+
+	row := tx.QueryRow(ctx, selectQuery, wallet.UUID)
+
+	var currentBalance int64
+	err = row.Scan(&currentBalance)
+	if err != nil {
+		return err
+	}
+
 	query := `
 				UPDATE  wallets 
 				SET balance = $1
 				WHERE uuid = $2
 	`
-	res, err := s.Con.Exec(ctx, query, wallet.Amount, wallet.UUID)
+	_, err = tx.Exec(ctx, query, wallet.Amount, wallet.UUID)
 	if err != nil {
 		log.Println("Error inserting wallet", err)
 		return err
 	}
 
-	log.Println("inserted", res.RowsAffected())
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

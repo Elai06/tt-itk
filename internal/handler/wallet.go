@@ -43,7 +43,6 @@ func (w *wallet) RegisterRoutes(port string) error {
 func (w *wallet) Create(c *gin.Context) {
 	var req dto.WalletRequest
 	err := c.ShouldBindQuery(&req)
-	log.Println(req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"message": "invalid request body",

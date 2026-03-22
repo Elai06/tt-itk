@@ -25,6 +25,7 @@ func NewWalletService(repo repository.Repository) WalletService {
 
 func (s *walletService) Create(ctx context.Context, received dto.WalletRequest) error {
 	amount, err := s.repo.Get(ctx, received.UUID)
+
 	if err != nil && received.OperationType == model.DEPOSIT {
 		return s.repo.Create(ctx, received)
 	} else {
