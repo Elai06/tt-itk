@@ -32,7 +32,7 @@ func (w *wallet) RegisterRoutes(port string) error {
 		v1.GET("/wallets/:walletId", w.Get)
 	}
 
-	err := r.Run("localhost:" + port)
+	err := r.Run(":" + port)
 	if err != nil {
 		return err
 	}

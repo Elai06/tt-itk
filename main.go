@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"itk/internal/handler"
 	"itk/internal/migrator"
 	"itk/internal/repository"
@@ -14,14 +15,19 @@ import (
 )
 
 func main() {
-	err := godotenv.Load("config.env")
+	err := godotenv.Overload("config.env")
 
 	if err != nil {
-		log.Printf("Error loading .env file")
+		log.Printf("Error loading config.env: %v", err)
 		return
 	}
 
-	dbUrl := os.Getenv("DB_URI")
+	dbUrl, err := requiredEnv("DB_URI")
+	if err != nil {
+		log.Printf("Configuration error: %v", err)
+		return
+	}
+
 	ctx := context.Background()
 	rep, err := repository.NewRepository(dbUrl, ctx)
 	if err != nil {
@@ -37,7 +43,12 @@ func main() {
 		}
 	}(rep)
 
-	migratorDir := os.Getenv("MIGRATIONS_DIR")
+	migratorDir, err := requiredEnv("MIGRATIONS_DIR")
+	if err != nil {
+		log.Printf("Configuration error: %v", err)
+		return
+	}
+
 	migratorRunner := migrator.NewMigrator(stdlib.OpenDB(*rep.GetConConfig()), migratorDir)
 
 	err = migratorRunner.Up()
@@ -48,9 +59,24 @@ func main() {
 
 	s := service.NewWalletService(rep)
 	h := handler.NewWalletHandler(s)
-	err = h.RegisterRoutes(os.Getenv("PORT"))
+	port, err := requiredEnv("PORT")
+	if err != nil {
+		log.Printf("Configuration error: %v", err)
+		return
+	}
+
+	err = h.RegisterRoutes(port)
 	if err != nil {
 		log.Printf("Error registering routes: %v", err)
 		return
 	}
+}
+
+func requiredEnv(key string) (string, error) {
+	value, exists := os.LookupEnv(key)
+	if !exists || value == "" {
+		return "", fmt.Errorf("%s is not set in config.env", key)
+	}
+
+	return value, nil
 }

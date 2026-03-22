@@ -25,8 +25,9 @@ func TestRepository_Create(t *testing.T) {
 		{
 			name: "success",
 			wallet: dto.WalletRequest{
-				UUID:   1,
-				Amount: 100,
+				UUID:          1,
+				OperationType: "DEPOSIT",
+				Amount:        100,
 			},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
 				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid) 
@@ -40,8 +41,9 @@ func TestRepository_Create(t *testing.T) {
 		{
 			name: "db error",
 			wallet: dto.WalletRequest{
-				UUID:   2,
-				Amount: 200,
+				UUID:          2,
+				OperationType: "WITHDRAW",
+				Amount:        200,
 			},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
 				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid) 
@@ -93,8 +95,9 @@ func TestRepository_Update(t *testing.T) {
 		{
 			name: "success",
 			wallet: dto.WalletRequest{
-				UUID:   1,
-				Amount: 500,
+				UUID:          1,
+				OperationType: "DEPOSIT",
+				Amount:        500,
 			},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
 				query := regexp.QuoteMeta(`
@@ -111,8 +114,9 @@ func TestRepository_Update(t *testing.T) {
 		{
 			name: "db error",
 			wallet: dto.WalletRequest{
-				UUID:   2,
-				Amount: 700,
+				UUID:          2,
+				OperationType: "WITHDRAW",
+				Amount:        700,
 			},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
 				query := regexp.QuoteMeta(`
