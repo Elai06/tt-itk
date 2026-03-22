@@ -8,6 +8,8 @@ import (
 	"itk/internal/repository"
 )
 
+//go:generate mockgen -destination=mocks/mock_wallet_service.go -package=mocks itk/internal/service WalletService
+
 type WalletService interface {
 	Create(ctx context.Context, received dto.WalletRequest) error
 	Get(ctx context.Context, uuid int64) (int64, error)

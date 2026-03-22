@@ -7,7 +7,10 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
+
+//go:generate mockgen -destination=mocks/mock_repository.go -package=mocks itk/internal/repository Repository
 
 type Repository interface {
 	Create(ctx context.Context, wallet dto.WalletRequest) error
@@ -17,8 +20,16 @@ type Repository interface {
 	Close(ctx context.Context) error
 }
 
+type DB interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Close(ctx context.Context) error
+	Config() *pgx.ConnConfig
+	Ping(ctx context.Context) error
+}
+
 type repository struct {
-	Con *pgx.Conn
+	Con DB
 }
 
 func NewRepository(dbUrl string, ctx context.Context) (Repository, error) {
