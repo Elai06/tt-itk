@@ -1,11 +1,11 @@
-package service
+package wallet
 
 import (
 	"context"
 	"errors"
-	"itk/internal/dto"
-	"itk/internal/model"
-	"itk/internal/repository/mocks"
+	"itk-wallet/internal/dto"
+	"itk-wallet/internal/model"
+	"itk-wallet/internal/service/wallet/mocks"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -17,7 +17,7 @@ func TestWalletServiceCreate(t *testing.T) {
 	tests := []struct {
 		name      string
 		req       dto.WalletRequest
-		mockSetup func(ctx context.Context, repo *mocks.MockRepository)
+		mockSetup func(ctx context.Context, repo *mocks.MockStorage)
 		wantErr   string
 	}{
 		{
@@ -27,17 +27,13 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.DEPOSIT,
 				Amount:        100,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(1)).
 						Return(int64(0), errors.New("not found")),
 					repo.EXPECT().
-						Create(ctx, dto.WalletRequest{
-							UUID:          1,
-							OperationType: model.DEPOSIT,
-							Amount:        100,
-						}).
+						Create(ctx, model.Wallet{UUID: 1, Balance: 100}).
 						Return(nil),
 				)
 			},
@@ -49,17 +45,13 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.DEPOSIT,
 				Amount:        50,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(2)).
 						Return(int64(150), nil),
 					repo.EXPECT().
-						Update(ctx, dto.WalletRequest{
-							UUID:          2,
-							OperationType: model.DEPOSIT,
-							Amount:        200,
-						}).
+						Update(ctx, model.Wallet{UUID: 2, Balance: 200}).
 						Return(nil),
 				)
 			},
@@ -71,17 +63,13 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.WITHDRAW,
 				Amount:        30,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(3)).
 						Return(int64(100), nil),
 					repo.EXPECT().
-						Update(ctx, dto.WalletRequest{
-							UUID:          3,
-							OperationType: model.WITHDRAW,
-							Amount:        70,
-						}).
+						Update(ctx, model.Wallet{UUID: 3, Balance: 70}).
 						Return(nil),
 				)
 			},
@@ -93,7 +81,7 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.WITHDRAW,
 				Amount:        80,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				repo.EXPECT().
 					Get(ctx, int64(4)).
 					Return(int64(50), nil)
@@ -107,18 +95,14 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.DEPOSIT,
 				Amount:        100,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				createErr := errors.New("create failed")
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(5)).
 						Return(int64(0), errors.New("not found")),
 					repo.EXPECT().
-						Create(ctx, dto.WalletRequest{
-							UUID:          5,
-							OperationType: model.DEPOSIT,
-							Amount:        100,
-						}).
+						Create(ctx, model.Wallet{UUID: 5, Balance: 100}).
 						Return(createErr),
 				)
 			},
@@ -131,18 +115,14 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.DEPOSIT,
 				Amount:        20,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				updateErr := errors.New("update failed")
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(6)).
 						Return(int64(10), nil),
 					repo.EXPECT().
-						Update(ctx, dto.WalletRequest{
-							UUID:          6,
-							OperationType: model.DEPOSIT,
-							Amount:        30,
-						}).
+						Update(ctx, model.Wallet{UUID: 6, Balance: 30}).
 						Return(updateErr),
 				)
 			},
@@ -155,18 +135,14 @@ func TestWalletServiceCreate(t *testing.T) {
 				OperationType: model.WITHDRAW,
 				Amount:        10,
 			},
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				updateErr := errors.New("update failed")
 				gomock.InOrder(
 					repo.EXPECT().
 						Get(ctx, int64(7)).
 						Return(int64(15), nil),
 					repo.EXPECT().
-						Update(ctx, dto.WalletRequest{
-							UUID:          7,
-							OperationType: model.WITHDRAW,
-							Amount:        5,
-						}).
+						Update(ctx, model.Wallet{UUID: 7, Balance: 5}).
 						Return(updateErr),
 				)
 			},
@@ -180,7 +156,7 @@ func TestWalletServiceCreate(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			repo := mocks.NewMockRepository(ctrl)
+			repo := mocks.NewMockStorage(ctrl)
 			svc := NewWalletService(repo)
 			ctx := context.Background()
 
@@ -188,14 +164,14 @@ func TestWalletServiceCreate(t *testing.T) {
 
 			err := svc.Create(ctx, tt.req)
 			if tt.wantErr == "" && err != nil {
-				t.Fatalf("Create() unexpected error = %v", err)
+				t.Fatalf("Insert() unexpected error = %v", err)
 			}
 			if tt.wantErr != "" {
 				if err == nil {
-					t.Fatalf("Create() error = nil, want %q", tt.wantErr)
+					t.Fatalf("Insert() error = nil, want %q", tt.wantErr)
 				}
 				if err.Error() != tt.wantErr {
-					t.Fatalf("Create() error = %q, want %q", err.Error(), tt.wantErr)
+					t.Fatalf("Insert() error = %q, want %q", err.Error(), tt.wantErr)
 				}
 			}
 		})
@@ -208,14 +184,14 @@ func TestWalletServiceGet(t *testing.T) {
 	tests := []struct {
 		name       string
 		uuid       int64
-		mockSetup  func(ctx context.Context, repo *mocks.MockRepository)
+		mockSetup  func(ctx context.Context, repo *mocks.MockStorage)
 		wantAmount int64
 		wantErr    string
 	}{
 		{
 			name: "success",
 			uuid: 42,
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				repo.EXPECT().
 					Get(ctx, int64(42)).
 					Return(int64(900), nil)
@@ -223,9 +199,9 @@ func TestWalletServiceGet(t *testing.T) {
 			wantAmount: 900,
 		},
 		{
-			name: "repository error",
+			name: "storage error",
 			uuid: 77,
-			mockSetup: func(ctx context.Context, repo *mocks.MockRepository) {
+			mockSetup: func(ctx context.Context, repo *mocks.MockStorage) {
 				repo.EXPECT().
 					Get(ctx, int64(77)).
 					Return(int64(0), errors.New("not found"))
@@ -240,7 +216,7 @@ func TestWalletServiceGet(t *testing.T) {
 			t.Parallel()
 
 			ctrl := gomock.NewController(t)
-			repo := mocks.NewMockRepository(ctrl)
+			repo := mocks.NewMockStorage(ctrl)
 			svc := NewWalletService(repo)
 			ctx := context.Background()
 

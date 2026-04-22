@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"itk/internal/dto"
-	"itk/internal/service"
+	"itk-wallet/internal/dto"
+	walletService "itk-wallet/internal/service/wallet"
 	"log"
 	"net/http"
 	"strconv"
@@ -13,31 +13,14 @@ import (
 type WalletHandler interface {
 	Create(c *gin.Context)
 	Get(c *gin.Context)
-	RegisterRoutes(port string) error
 }
 
 type wallet struct {
-	service service.WalletService
+	service walletService.WalletService
 }
 
-func NewWalletHandler(service service.WalletService) WalletHandler {
+func NewWalletHandler(service walletService.WalletService) WalletHandler {
 	return &wallet{service: service}
-}
-
-func (w *wallet) RegisterRoutes(port string) error {
-	r := gin.Default()
-	v1 := r.Group("/api/v1")
-	{
-		v1.POST("/wallet", w.Create)
-		v1.GET("/wallets/:walletId", w.Get)
-	}
-
-	err := r.Run(":" + port)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (w *wallet) Create(c *gin.Context) {
@@ -62,8 +45,6 @@ func (w *wallet) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "success",
 	})
-
-	return
 }
 
 func (w *wallet) Get(c *gin.Context) {

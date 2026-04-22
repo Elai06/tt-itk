@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o /bin/tt-itk .
+RUN go build -o /bin/tt-itk ./cmd
 
 FROM alpine:3.22
 

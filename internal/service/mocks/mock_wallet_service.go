@@ -6,7 +6,7 @@ package mocks
 
 import (
 	context "context"
-	dto "itk/internal/dto"
+	dto "itk-wallet/internal/dto"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -38,7 +38,7 @@ func (m *MockWalletService) EXPECT() *MockWalletServiceMockRecorder {
 // Create mocks base method.
 func (m *MockWalletService) Create(arg0 context.Context, arg1 dto.WalletRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
+	ret := m.ctrl.Call(m, "Insert", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -46,7 +46,7 @@ func (m *MockWalletService) Create(arg0 context.Context, arg1 dto.WalletRequest)
 // Create indicates an expected call of Create.
 func (mr *MockWalletServiceMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockWalletService)(nil).Create), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Insert", reflect.TypeOf((*MockWalletService)(nil).Create), arg0, arg1)
 }
 
 // Get mocks base method.

@@ -1,9 +1,9 @@
-package repository
+package wallet
 
 import (
 	"context"
 	"errors"
-	"itk/internal/dto"
+	"itk-wallet/internal/model"
 	"regexp"
 	"testing"
 
@@ -11,42 +11,42 @@ import (
 	"github.com/pashagolub/pgxmock/v5"
 )
 
-func TestRepository_Create(t *testing.T) {
+func newWalletRepoMock(t *testing.T) (*Wallet, pgxmock.PgxConnIface) {
+	t.Helper()
+	mock, err := pgxmock.NewConn()
+	if err != nil {
+		t.Fatalf("failed to create mock: %v", err)
+	}
+	return &Wallet{db: mock}, mock
+}
+
+func TestWalletRepo_Create(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
 	tests := []struct {
 		name      string
-		wallet    dto.WalletRequest
+		wallet    model.Wallet
 		mockSetup func(mock pgxmock.PgxConnIface)
 		wantErr   bool
 	}{
 		{
-			name: "success",
-			wallet: dto.WalletRequest{
-				UUID:          1,
-				OperationType: "DEPOSIT",
-				Amount:        100,
-			},
+			name:   "success",
+			wallet: model.Wallet{UUID: 1, Balance: 100},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid) 
+				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid)
 				VALUES ($1, $2)`)
 				mock.ExpectExec(query).
 					WithArgs(int64(100), int64(1)).
 					WillReturnResult(pgxmock.NewResult("INSERT", 1))
 			},
-			wantErr: false,
 		},
 		{
-			name: "db error",
-			wallet: dto.WalletRequest{
-				UUID:          2,
-				OperationType: "WITHDRAW",
-				Amount:        200,
-			},
+			name:   "db error",
+			wallet: model.Wallet{UUID: 2, Balance: 200},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid) 
+				query := regexp.QuoteMeta(`INSERT INTO wallets (balance, uuid)
 				VALUES ($1, $2)`)
 				mock.ExpectExec(query).
 					WithArgs(int64(200), int64(2)).
@@ -57,23 +57,17 @@ func TestRepository_Create(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mock, err := pgxmock.NewConn()
-			if err != nil {
-				t.Fatalf("failed to create mock: %v", err)
-			}
-
+			repo, mock := newWalletRepoMock(t)
 			tt.mockSetup(mock)
 
-			repo := &repository{Con: mock}
-
-			err = repo.Create(ctx, tt.wallet)
+			err := repo.Insert(ctx, tt.wallet)
 			if (err != nil) != tt.wantErr {
-				t.Fatalf("Create() error = %v, wantErr %v", err, tt.wantErr)
+				t.Fatalf("Insert() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
 			if err = mock.ExpectationsWereMet(); err != nil {
 				t.Fatalf("unmet expectations: %v", err)
 			}
@@ -81,75 +75,67 @@ func TestRepository_Create(t *testing.T) {
 	}
 }
 
-func TestRepository_Update(t *testing.T) {
+func TestWalletRepo_Update(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
 
+	selectQuery := regexp.QuoteMeta(`SELECT balance FROM wallets WHERE uuid = $1 FOR UPDATE`)
+	updateQuery := regexp.QuoteMeta(`
+					UPDATE  wallets
+					SET balance = $1
+					WHERE uuid = $2
+		`)
+
 	tests := []struct {
 		name      string
-		wallet    dto.WalletRequest
+		wallet    model.Wallet
 		mockSetup func(mock pgxmock.PgxConnIface)
 		wantErr   bool
 	}{
 		{
-			name: "success",
-			wallet: dto.WalletRequest{
-				UUID:          1,
-				OperationType: "DEPOSIT",
-				Amount:        500,
-			},
+			name:   "success",
+			wallet: model.Wallet{UUID: 1, Balance: 500},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				query := regexp.QuoteMeta(`
-				UPDATE  wallets 
-				SET balance = $1
-				WHERE uuid = $2
-	`)
-				mock.ExpectExec(query).
+				mock.ExpectBegin()
+				mock.ExpectQuery(selectQuery).
+					WithArgs(int64(1)).
+					WillReturnRows(pgxmock.NewRows([]string{"balance"}).AddRow(int64(400)))
+				mock.ExpectExec(updateQuery).
 					WithArgs(int64(500), int64(1)).
 					WillReturnResult(pgxmock.NewResult("UPDATE", 1))
+				mock.ExpectCommit()
 			},
-			wantErr: false,
 		},
 		{
-			name: "db error",
-			wallet: dto.WalletRequest{
-				UUID:          2,
-				OperationType: "WITHDRAW",
-				Amount:        700,
-			},
+			name:   "db error on exec",
+			wallet: model.Wallet{UUID: 2, Balance: 700},
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				query := regexp.QuoteMeta(`
-				UPDATE  wallets 
-				SET balance = $1
-				WHERE uuid = $2
-	`)
-				mock.ExpectExec(query).
+				mock.ExpectBegin()
+				mock.ExpectQuery(selectQuery).
+					WithArgs(int64(2)).
+					WillReturnRows(pgxmock.NewRows([]string{"balance"}).AddRow(int64(600)))
+				mock.ExpectExec(updateQuery).
 					WithArgs(int64(700), int64(2)).
 					WillReturnError(errors.New("update failed"))
+				mock.ExpectRollback()
 			},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mock, err := pgxmock.NewConn()
-			if err != nil {
-				t.Fatalf("failed to create mock: %v", err)
-			}
-
+			repo, mock := newWalletRepoMock(t)
 			tt.mockSetup(mock)
 
-			repo := &repository{Con: mock}
-
-			err = repo.Update(ctx, tt.wallet)
+			err := repo.Update(ctx, tt.wallet)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Update() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
 			if err = mock.ExpectationsWereMet(); err != nil {
 				t.Fatalf("unmet expectations: %v", err)
 			}
@@ -157,10 +143,14 @@ func TestRepository_Update(t *testing.T) {
 	}
 }
 
-func TestRepository_Get(t *testing.T) {
+func TestWalletRepo_Get(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
+
+	query := regexp.QuoteMeta(`SELECT balance
+			FROM wallets
+			WHERE uuid = $1`)
 
 	tests := []struct {
 		name       string
@@ -173,91 +163,52 @@ func TestRepository_Get(t *testing.T) {
 			name: "success",
 			uuid: 1,
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				rows := pgxmock.NewRows([]string{"balance"}).AddRow(int64(1000))
-				query := regexp.QuoteMeta(`SELECT balance
-			FROM wallets 
-			WHERE uuid = $1`)
 				mock.ExpectQuery(query).
 					WithArgs(int64(1)).
-					WillReturnRows(rows)
+					WillReturnRows(pgxmock.NewRows([]string{"balance"}).AddRow(int64(1000)))
 			},
 			wantAmount: 1000,
-			wantErr:    false,
 		},
 		{
 			name: "not found",
 			uuid: 2,
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				query := regexp.QuoteMeta(`SELECT balance
-			FROM wallets 
-			WHERE uuid = $1`)
 				mock.ExpectQuery(query).
 					WithArgs(int64(2)).
 					WillReturnError(pgx.ErrNoRows)
 			},
-			wantAmount: 0,
-			wantErr:    true,
+			wantErr: true,
 		},
 		{
 			name: "scan error",
 			uuid: 3,
 			mockSetup: func(mock pgxmock.PgxConnIface) {
-				rows := pgxmock.NewRows([]string{"balance"}).AddRow("bad_value")
-				query := regexp.QuoteMeta(`SELECT balance
-			FROM wallets 
-			WHERE uuid = $1`)
 				mock.ExpectQuery(query).
 					WithArgs(int64(3)).
-					WillReturnRows(rows)
+					WillReturnRows(pgxmock.NewRows([]string{"balance"}).AddRow("bad_value"))
 			},
-			wantAmount: 0,
-			wantErr:    true,
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mock, err := pgxmock.NewConn()
-			if err != nil {
-				t.Fatalf("failed to create mock: %v", err)
-			}
-
+			repo, mock := newWalletRepoMock(t)
 			tt.mockSetup(mock)
-
-			repo := &repository{Con: mock}
 
 			got, err := repo.Get(ctx, tt.uuid)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("Get() error = %v, wantErr %v", err, tt.wantErr)
 			}
-
 			if got != tt.wantAmount {
 				t.Fatalf("Get() got = %d, want %d", got, tt.wantAmount)
 			}
-
 			if err = mock.ExpectationsWereMet(); err != nil {
 				t.Fatalf("unmet expectations: %v", err)
 			}
 		})
-	}
-}
-
-func TestRepository_Close(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-
-	mock, err := pgxmock.NewConn()
-	if err != nil {
-		t.Fatalf("failed to create mock: %v", err)
-	}
-
-	repo := &repository{Con: mock}
-
-	mock.ExpectClose()
-	if err = repo.Close(ctx); err != nil {
-		t.Fatalf("Close() error = %v", err)
 	}
 }
