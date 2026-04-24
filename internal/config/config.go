@@ -13,6 +13,7 @@ type Config struct {
 	DBUrl         string
 	MigrationsDir string
 	Port          string
+	GrpcAddr      string
 	JWTSecret     string
 	JWTExpiration time.Duration
 }
@@ -52,12 +53,18 @@ func Load(path string) (*Config, error) {
 		return nil, err
 	}
 
+	grpcAddr, err := requiredEnv("GRPC_ADDR")
+	if err != nil {
+		return nil, err
+	}
+
 	return &Config{
 		DBUrl:         dbUrl,
 		MigrationsDir: migrationsDir,
 		Port:          port,
 		JWTSecret:     jwtSecret,
 		JWTExpiration: time.Duration(expiration) * time.Second,
+		GrpcAddr:      grpcAddr,
 	}, nil
 }
 

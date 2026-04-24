@@ -32,22 +32,25 @@ func (s *walletService) Create(ctx context.Context, received dto.WalletRequest) 
 
 	if err != nil && received.OperationType == model.DEPOSIT {
 		return s.storage.Insert(ctx, model.Wallet{
-			UUID:    received.UUID,
-			Balance: received.Amount,
+			UUID:         received.UUID,
+			CurrencyCode: received.CurrencyCode,
+			Balance:      received.Amount,
 		})
 	}
 
 	switch received.OperationType {
 	case model.DEPOSIT:
 		return s.storage.Update(ctx, model.Wallet{
-			UUID:    received.UUID,
-			Balance: amount + received.Amount,
+			UUID:         received.UUID,
+			CurrencyCode: received.CurrencyCode,
+			Balance:      amount + received.Amount,
 		})
 	case model.WITHDRAW:
 		if amount >= received.Amount {
 			return s.storage.Update(ctx, model.Wallet{
-				UUID:    received.UUID,
-				Balance: amount - received.Amount,
+				UUID:         received.UUID,
+				CurrencyCode: received.CurrencyCode,
+				Balance:      amount - received.Amount,
 			})
 		}
 		return errors.New("not enough wallet")

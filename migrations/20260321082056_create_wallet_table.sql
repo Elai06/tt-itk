@@ -1,11 +1,12 @@
 -- +goose Up
 CREATE TABLE wallets
 (
-    id             SERIAL PRIMARY KEY,
-    uuid           BIGINT    NOT NULL,
-    balance        BIGINT    NOT NULL DEFAULT 0,
-    created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at     TIMESTAMP NOT NULL DEFAULT NOW()
+    id          SERIAL PRIMARY KEY,
+    uuid        BIGINT    NOT NULL,
+    currency_id integer   NOT NULL,
+    balance     BIGINT    NOT NULL DEFAULT 0,
+    created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 create index idx_wallet_id on wallets (uuid);
