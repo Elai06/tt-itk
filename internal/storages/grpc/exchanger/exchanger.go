@@ -3,7 +3,7 @@ package exchanger
 import (
 	"context"
 	exchanger2 "itk-wallet/internal/service/exchanger"
-	"itk-wallet/internal/storages/db/grpc"
+	"itk-wallet/internal/storages/grpc"
 )
 
 type exchanger struct {

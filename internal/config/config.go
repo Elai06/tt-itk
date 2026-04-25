@@ -18,6 +18,12 @@ type Config struct {
 	JWTExpiration time.Duration
 }
 
+type KafkaConfig struct {
+	Broker  []string
+	Topic   string
+	GroupId string
+}
+
 func Load(path string) (*Config, error) {
 	if err := godotenv.Overload(path); err != nil {
 		return nil, fmt.Errorf("loading config file %s: %w", path, err)
@@ -65,6 +71,35 @@ func Load(path string) (*Config, error) {
 		JWTSecret:     jwtSecret,
 		JWTExpiration: time.Duration(expiration) * time.Second,
 		GrpcAddr:      grpcAddr,
+	}, nil
+}
+
+func LoadKafkaConfig(path string) (*KafkaConfig, error) {
+	if err := godotenv.Overload(path); err != nil {
+		return nil, fmt.Errorf("loading config file %s: %w", path, err)
+	}
+
+	broker, err := requiredEnv("KAFKA_BROKER")
+	if err != nil {
+		return nil, err
+	}
+	brokers := make([]string, 0)
+	brokers = append(brokers, broker)
+
+	topic, err := requiredEnv("KAFKA_TOPIC")
+	if err != nil {
+		return nil, err
+	}
+
+	groupId, err := requiredEnv("KAFKA_GROUP_ID")
+	if err != nil {
+		return nil, err
+	}
+
+	return &KafkaConfig{
+		Broker:  brokers,
+		Topic:   topic,
+		GroupId: groupId,
 	}, nil
 }
 

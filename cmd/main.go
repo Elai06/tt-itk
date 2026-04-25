@@ -10,11 +10,12 @@ import (
 	"itk-wallet/internal/service/exchanger"
 	user2 "itk-wallet/internal/service/user"
 	"itk-wallet/internal/service/wallet"
-	"itk-wallet/internal/storages/db/grpc"
-	exchanger2 "itk-wallet/internal/storages/db/grpc/exchanger"
 	"itk-wallet/internal/storages/db/postgres"
 	"itk-wallet/internal/storages/db/postgres/user"
 	walletRepo "itk-wallet/internal/storages/db/postgres/wallet"
+	"itk-wallet/internal/storages/grpc"
+	exchanger2 "itk-wallet/internal/storages/grpc/exchanger"
+	"itk-wallet/internal/storages/kafka"
 	"log"
 )
 
@@ -40,8 +41,20 @@ func main() {
 		}
 	}()
 
+	kafkaCfg, err := config.LoadKafkaConfig(*configPath)
+	if err != nil {
+		log.Fatalf("Error loading kafka config: %v", err)
+	}
+
+	kafkaClient, err := kafka.NewKafka(*kafkaCfg)
+	if err != nil {
+		log.Fatalf("Error creating kafka client: %v", err)
+	}
+
+	kProducer := kafkaClient.Producer()
+
 	walletStorage := walletRepo.NewWallet(client.Conn)
-	walletSvc := wallet.NewWalletService(walletStorage)
+	walletSvc := wallet.NewWalletService(walletStorage, kProducer)
 
 	userStorage := user.NewUser(client.Conn)
 	jwt := auth.NewJwt([]byte(cfg.JWTSecret), cfg.JWTExpiration)

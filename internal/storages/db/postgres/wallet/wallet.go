@@ -59,7 +59,7 @@ func (r *Wallet) Update(ctx context.Context, wallet model.Wallet) error {
 func (r *Wallet) Get(ctx context.Context, uuid int64) (int64, error) {
 	query := `SELECT balance
 			FROM wallets
-			WHERE id = $1`
+			WHERE uuid = $1`
 
 	var amount int64
 	if err := r.db.QueryRow(ctx, query, uuid).Scan(&amount); err != nil {
