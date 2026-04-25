@@ -26,10 +26,10 @@ type WalletService interface {
 
 type walletService struct {
 	storage   Storage
-	kProducer kafka.Producer
+	kProducer kafka.WalletProducer
 }
 
-func NewWalletService(storage Storage, kProducer kafka.Producer) WalletService {
+func NewWalletService(storage Storage, kProducer kafka.WalletProducer) WalletService {
 	return &walletService{storage: storage, kProducer: kProducer}
 }
 

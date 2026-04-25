@@ -51,10 +51,11 @@ func main() {
 		log.Fatalf("Error creating kafka client: %v", err)
 	}
 
-	kProducer := kafkaClient.Producer()
+	walletProducer := kafkaClient.WalletProducer()
+	_ = kafkaClient.AnalyticProducer()
 
 	walletStorage := walletRepo.NewWallet(client.Conn)
-	walletSvc := wallet.NewWalletService(walletStorage, kProducer)
+	walletSvc := wallet.NewWalletService(walletStorage, walletProducer)
 
 	userStorage := user.NewUser(client.Conn)
 	jwt := auth.NewJwt([]byte(cfg.JWTSecret), cfg.JWTExpiration)

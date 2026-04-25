@@ -19,9 +19,10 @@ type Config struct {
 }
 
 type KafkaConfig struct {
-	Broker  []string
-	Topic   string
-	GroupId string
+	Broker        []string
+	WalletTopic   string
+	AnalyticTopic string
+	GroupId       string
 }
 
 func Load(path string) (*Config, error) {
@@ -86,7 +87,12 @@ func LoadKafkaConfig(path string) (*KafkaConfig, error) {
 	brokers := make([]string, 0)
 	brokers = append(brokers, broker)
 
-	topic, err := requiredEnv("KAFKA_TOPIC")
+	topic, err := requiredEnv("KAFKA_WALLET_TOPIC")
+	if err != nil {
+		return nil, err
+	}
+
+	analyticTopic, err := requiredEnv("KAFKA_ANALYTIC_TOPIC")
 	if err != nil {
 		return nil, err
 	}
@@ -97,9 +103,10 @@ func LoadKafkaConfig(path string) (*KafkaConfig, error) {
 	}
 
 	return &KafkaConfig{
-		Broker:  brokers,
-		Topic:   topic,
-		GroupId: groupId,
+		Broker:        brokers,
+		WalletTopic:   topic,
+		AnalyticTopic: analyticTopic,
+		GroupId:       groupId,
 	}, nil
 }
 

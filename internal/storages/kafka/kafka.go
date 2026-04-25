@@ -5,23 +5,31 @@ import (
 )
 
 type kafkaClient struct {
-	producer Producer
+	wallet   WalletProducer
+	analytic AnalyticProducer
 }
 
 type Kafka interface {
-	Producer() Producer
+	WalletProducer() WalletProducer
+	AnalyticProducer() AnalyticProducer
 	Close() error
 }
 
 func NewKafka(cfg config.KafkaConfig) (Kafka, error) {
-	prod := NewProduce(cfg)
-	return &kafkaClient{producer: prod}, nil
+	w := NewWalletProducer(cfg)
+	a := NewAnalyticProducer(cfg)
+	return &kafkaClient{wallet: w, analytic: a}, nil
 }
 
-func (k *kafkaClient) Producer() Producer {
-	return k.producer
+func (k *kafkaClient) WalletProducer() WalletProducer {
+	return k.wallet
 }
+
+func (k *kafkaClient) AnalyticProducer() AnalyticProducer {
+	return k.analytic
+}
+
 func (k *kafkaClient) Close() error {
-	err := k.producer.Close()
+	err := k.wallet.Close()
 	return err
 }

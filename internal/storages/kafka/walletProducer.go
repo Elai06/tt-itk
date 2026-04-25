@@ -1,0 +1,70 @@
+package kafka
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"itk-wallet/internal/config"
+	"time"
+
+	"github.com/segmentio/kafka-go"
+)
+
+type WalletEventProducer struct {
+	UUID         int64
+	CurrencyCode string
+	Amount       int64
+}
+
+type WalletProducer interface {
+	SendRemittanceWallet(ctx context.Context, key string, value WalletEventProducer) error
+	Close() error
+}
+
+type wallet struct {
+	writer *kafka.Writer
+}
+
+func NewWalletProducer(cfg config.KafkaConfig) WalletProducer {
+	return &wallet{
+		writer: &kafka.Writer{
+			Addr:         kafka.TCP(cfg.Broker...),
+			Topic:        cfg.WalletTopic,
+			Balancer:     &kafka.Hash{},
+			RequiredAcks: kafka.RequireAll,
+			BatchTimeout: 10 * time.Millisecond,
+		},
+	}
+}
+
+func (p *wallet) SendRemittanceWallet(ctx context.Context, key string, data WalletEventProducer) error {
+	payload, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+
+	err = p.sendEvent(ctx, key, payload)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *wallet) sendEvent(ctx context.Context, key string, payload []byte) error {
+	err := p.writer.WriteMessages(ctx, kafka.Message{
+		Key:   []byte(key),
+		Value: payload,
+		Time:  time.Now(),
+	})
+
+	if err != nil {
+		return fmt.Errorf("kafka: write messages: %w", err)
+	}
+
+	return nil
+}
+
+func (p *wallet) Close() error {
+	return p.writer.Close()
+}

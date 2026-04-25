@@ -10,26 +10,26 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type WalletEventProducer struct {
+type AnalyticEventProducer struct {
 	UUID         int64
 	CurrencyCode string
 	Amount       int64
 }
 
-type Producer interface {
-	SendRemittanceWallet(ctx context.Context, key string, value WalletEventProducer) error
+type AnalyticProducer interface {
+	SendEvent(ctx context.Context, key string, value AnalyticEventProducer) error
 	Close() error
 }
 
-type producer struct {
+type analytic struct {
 	writer *kafka.Writer
 }
 
-func NewProduce(cfg config.KafkaConfig) Producer {
-	return &producer{
+func NewAnalyticProducer(cfg config.KafkaConfig) AnalyticProducer {
+	return &analytic{
 		writer: &kafka.Writer{
 			Addr:         kafka.TCP(cfg.Broker...),
-			Topic:        cfg.Topic,
+			Topic:        cfg.AnalyticTopic,
 			Balancer:     &kafka.Hash{},
 			RequiredAcks: kafka.RequireAll,
 			BatchTimeout: 10 * time.Millisecond,
@@ -37,8 +37,8 @@ func NewProduce(cfg config.KafkaConfig) Producer {
 	}
 }
 
-func (p *producer) SendRemittanceWallet(ctx context.Context, key string, value WalletEventProducer) error {
-	payload, err := json.Marshal(value)
+func (p *analytic) SendEvent(ctx context.Context, key string, data AnalyticEventProducer) error {
+	payload, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
@@ -56,6 +56,6 @@ func (p *producer) SendRemittanceWallet(ctx context.Context, key string, value W
 	return nil
 }
 
-func (p *producer) Close() error {
+func (p *analytic) Close() error {
 	return p.writer.Close()
 }
